@@ -3,7 +3,13 @@ GarrisonBuddyBeta
 
 Garrison buddy, your personal butler!
 
-v0.1
+v0.2
+
+Bug fixes:
+#83729758: GaB spams miner's coffee and mining pick when already buffed.
+#83729828: GaB will try to harvest again before looting which closes the loot window.
+#83656128: GaB will not always pick up mine shipment.
+
 Garrison - Movement (no mounts for now):
 Alliance: Lvl 2/3
 Horde: None

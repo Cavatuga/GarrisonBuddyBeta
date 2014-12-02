@@ -32,12 +32,13 @@ namespace GarrisonBuddy
                 ObjectManager.GetObjectsOfType<WoWGameObject>().Where(o => GardenItems.Contains(o.Entry)).ToList();
             if (!herbs.Any())
                 return false;
-
+            GarrisonBuddy.Diagnostic("Found herb to gather.");
             WoWGameObject itemToCollect = herbs.OrderBy(i => i.Distance).First();
             if (await MoveTo(itemToCollect.Location))
                 return true;
 
             itemToCollect.Interact();
+            //SetLootPoi(itemToCollect);
             await Buddy.Coroutines.Coroutine.Sleep(3500);
             return true;
         }
