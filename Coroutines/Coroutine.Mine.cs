@@ -48,14 +48,16 @@ namespace GarrisonBuddy
                 ObjectManager.GetObjectsOfType<WoWGameObject>().Where(o => mineItems.Contains(o.Entry)).ToList();
             if (!ores.Any())
                 return false;
+            
+            WoWGameObject itemToCollect = ores.OrderBy(i => i.Distance).First();
 
-            GarrisonBuddy.Diagnostic("Found ore to gather.");
+            GarrisonBuddy.Diagnostic("Found ore to gather at:" + itemToCollect.Location );
 
             if (minesId.Contains(Me.SubZoneId))
             {
                 // Do I have a mining pick to use
                 WoWItem miningPick = Me.BagItems.FirstOrDefault(o => o.Entry == PreserverdMiningPickItemId);
-                if (miningPick != null && miningPick.Usable 
+                if (miningPick != null && miningPick.Usable
                     && !Me.HasAura(PreserverdMiningPickAura)
                     && miningPick.CooldownTimeLeft.TotalSeconds == 0)
                 {
@@ -75,7 +77,6 @@ namespace GarrisonBuddy
                 coffee.Use();
             }
 
-            WoWGameObject itemToCollect = ores.OrderBy(i => i.Distance).First();
             if (await MoveTo(itemToCollect.Location))
                 return true;
 
