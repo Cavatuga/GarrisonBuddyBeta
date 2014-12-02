@@ -4,6 +4,11 @@ GarrisonBuddyBeta
 Garrison buddy, your personal butler!
 
 ----------------------------------------------------------------------
+v0.4
+
+Remapped Horde Garrison, mines and garden(garden lvl 3 still not preoperly mapped)
+
+----------------------------------------------------------------------
 v0.3
 
 Added support for Garrison horde lvl 2 and 3
