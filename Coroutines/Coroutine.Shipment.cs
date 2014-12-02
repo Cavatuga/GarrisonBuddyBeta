@@ -32,6 +32,7 @@ namespace GarrisonBuddy
             236192,
             236193,
             236261,
+            236262,
             236263
         };
         private static readonly WoWPoint MineShipmentAlly = new WoWPoint(1901.799, 103.2309, 83.52671);
@@ -145,6 +146,8 @@ namespace GarrisonBuddy
             if (await MoveTo(toActivate.First().Location,"Building activation"))
                 return true;
 
+
+            await Buddy.Coroutines.Coroutine.Sleep(300); 
             toActivate.First().Interact();
             await Buddy.Coroutines.Coroutine.Sleep(5000);
             return true;
