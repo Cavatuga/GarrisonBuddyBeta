@@ -4,8 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using GarrisonBuddy.Config;
 using GarrisonLua;
+using MainDev.RemoteASM.Handlers;
 using Styx;
+using Styx.Common.Helpers;
 using Styx.CommonBot.Coroutines;
+using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 
 namespace GarrisonBuddy
@@ -16,48 +19,41 @@ namespace GarrisonBuddy
 
         private static readonly WoWPoint TableHorde = new WoWPoint(5559, 4599, 140);
         private static readonly WoWPoint TableAlliance = new WoWPoint(1933, 346, 91);
+        private static bool LastCheckValue;
+        private static readonly WaitTimer refreshMissionsTimer = new WaitTimer(TimeSpan.FromMinutes(5));
+        private static readonly WaitTimer refreshFollowerTimer = new WaitTimer(TimeSpan.FromMinutes(5));
 
-        public static async Task<bool> DoCheckAvailableMissions()
+        private static void InitializeMissions()
         {
-            if (!GaBSettings.Mono.DoMissions)
-                return false;
-
-            if (!Check)
-                return false;
-
-            // Is there mission to turn in?
-            if (MissionLua.GetNumberAvailableMissions() == 0)
-                return false;
-
-            GarrisonBuddy.Log("Found " + MissionLua.GetNumberAvailableMissions() + " available missions to complete.");
-            List<Follower> tempFollowers = FollowersLua.GetAllFollowers().Select(x => x).ToList();
-            var temp = new List<KeyValuePair<Mission, Follower[]>>();
-            foreach (Mission mission in MissionLua.GetAllAvailableMissionsReport())
-            {
-                Follower[] match =
-                    mission.FindMatch(tempFollowers.Where(f => f.IsCollected && f.Status == "nil").ToList());
-                if (match != null)
-                {
-                    temp.Add(new KeyValuePair<Mission, Follower[]>(mission, match));
-                    tempFollowers.RemoveAll(match.Contains);
-                }
-            }
-            ToStart.AddRange(temp.Where(x => ToStart.All(y => y.Key.MissionId != x.Key.MissionId)));
-            GarrisonBuddy.Log("Can succesfully complete: " + ToStart.Count + " missions.");
-            Check = false;
-            return true;
+            RefreshMissions();
         }
 
-        public static async Task<bool> DoStartMissions()
+        private static void RefreshMissions(bool forced = false)
         {
-            if (!GaBSettings.Mono.DoMissions)
+            if (!refreshMissionsTimer.IsFinished && _followers != null && !forced) return;
+            GarrisonBuddy.Log("Refreshing Missions database.");
+            _missions = MissionLua.GetAllAvailableMissions();
+            refreshMissionsTimer.Reset();
+        }
+
+        private static void RefreshFollowers(bool forced = false)
+        {
+            if (!refreshFollowerTimer.IsFinished && _followers != null && !forced) return;
+            GarrisonBuddy.Log("Refreshing Followers database.");
+            _followers = FollowersLua.GetAllFollowers();
+            refreshFollowerTimer.Reset();
+        }
+
+        private static bool CanRunStartMission()
+        {
+            return GaBSettings.Mono.StartMissions && DoCheckAvailableMissions() && ToStart.Count > 0;
+        }
+
+        public static async Task<bool> StartMissions()
+        {
+            if (!CanRunStartMission())
                 return false;
 
-            if (await DoCheckAvailableMissions())
-                return true;
-
-            if (ToStart.Count <= 0)
-                return false;
             KeyValuePair<Mission, Follower[]> match = ToStart.First();
 
             if (await MoveToTable())
@@ -70,7 +66,7 @@ namespace GarrisonBuddy
                 if (!await Buddy.Coroutines.Coroutine.Wait(2000, InterfaceLua.IsGarrisonMissionTabVisible))
                 {
                     GarrisonBuddy.Warning("Couldn't display GarrisonMissionTab.");
-                    return false;
+                    return true;
                 }
             }
             if (!InterfaceLua.IsGarrisonMissionVisible())
@@ -81,7 +77,7 @@ namespace GarrisonBuddy
                 if (!await Buddy.Coroutines.Coroutine.Wait(2000, InterfaceLua.IsGarrisonMissionVisible))
                 {
                     GarrisonBuddy.Warning("Couldn't display GarrisonMissionFrame.");
-                    return false;
+                    return true;
                 }
             }
             else if (!InterfaceLua.IsGarrisonMissionVisibleAndValid(match.Key.MissionId))
@@ -96,13 +92,55 @@ namespace GarrisonBuddy
                             () => InterfaceLua.IsGarrisonMissionVisibleAndValid(match.Key.MissionId)))
                 {
                     GarrisonBuddy.Warning("Couldn't display GarrisonMissionFrame or wrong mission opened.");
-                    return false;
+                    return true;
                 }
             }
             match.Key.AddFollowersToMission(match.Value.ToList());
             InterfaceLua.StartMission(match.Key);
             InterfaceLua.ClickCloseMission();
             return true;
+        }
+
+        private static WaitTimer CheckAvailableMissionTimer;
+        private static bool TurnInCompletedRunning;
+        private static bool StartMissionRunning;
+        private static WaitTimer _StartMissionsWaitTimer;
+
+        public static bool DoCheckAvailableMissions()
+        {
+            int numberMissionAvailable = MissionLua.GetNumberAvailableMissions();
+            // Is there mission available to start
+            if (numberMissionAvailable == 0)
+                return false;
+
+            bool forced = _missions != null && numberMissionAvailable != _missions.Count;
+
+            RefreshMissions(forced);
+            RefreshFollowers(forced);
+            
+            var temp = new List<KeyValuePair<Mission, Follower[]>>();
+            foreach (Mission mission in _missions)
+            {
+                Follower[] match =
+                    mission.FindMatch(_followers.Where(f => f.IsCollected && f.Status == "nil").ToList());
+                if (match != null)
+                {
+                    temp.Add(new KeyValuePair<Mission, Follower[]>(mission, match));
+                    _followers.RemoveAll(match.Contains);
+                }
+            }
+            ToStart.AddRange(temp.Where(x => ToStart.All(y => y.Key.MissionId != x.Key.MissionId)));
+            var mess = "Found " + numberMissionAvailable + " available missions to complete. " +
+                       "Can succesfully complete: " + ToStart.Count + " missions.";
+            if (ToStart.Any())
+              GarrisonBuddy.Log(mess);
+            
+        else
+                GarrisonBuddy.Diagnostic(mess);
+            
+
+            LastCheckValue = true;
+            return ToStart.Any();
         }
 
         public static async Task<bool> MoveToTable()
@@ -127,6 +165,49 @@ namespace GarrisonBuddy
                 GarrisonBuddy.Warning(e.ToString());
             }
             return true;
+        }
+
+        private static bool CanRunTurnInMissions()
+        {
+            return GaBSettings.Mono.CompletedMissions && MissionLua.GetNumberCompletedMissions() != 0;
+        }
+
+        public static async Task<bool> DoTurnInCompletedMissions()
+        {
+            if (!CanRunTurnInMissions())
+                return false;
+
+            GarrisonBuddy.Log("Found " + MissionLua.GetNumberCompletedMissions() + " completed missions to turn in.");
+
+            // are we at the action table?
+            if (await MoveToTable())
+                return true;
+
+            MissionLua.TurnInAllCompletedMissions();
+            RestoreCompletedMission = true;
+            await CommonCoroutines.SleepForLagDuration();
+            TurnInMissionsTriggered = false;
+            return true;
+        }
+
+        public static void GARRISON_MISSION_STARTED(object sender, LuaEventArgs args)
+        {
+            GarrisonBuddy.Diagnostic("LuaEvent: GARRISON_MISSION_STARTED");
+            string missionId = args.Args[0].ToString();
+            GarrisonBuddy.Diagnostic("LuaEvent: GARRISON_MISSION_STARTED - Removing from ToStart mission " + missionId);
+            ToStart.RemoveAll(m => m.Key.MissionId == missionId);
+        }
+
+        private async static Task<bool> DoMissions()
+        {
+            // Missions
+            if (await DoTurnInCompletedMissions())
+                return true;
+
+            if (await StartMissions())
+                return true;
+
+            return false;
         }
     }
 }

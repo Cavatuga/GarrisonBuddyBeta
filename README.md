@@ -2,6 +2,20 @@ GarrisonBuddyBeta
 =================
 
 Garrison buddy, your personal butler!
+----------------------------------------------------------------------
+v0.5
+
+Added Feature: Now compatible as secondary bot with AutoAngler or GatherBuddy, you can fish while waiting for work orders or/and missions!
+Added Feature: New navigation system bringing longer waypoints when available, the bot will now use a mount if available.
+Added Feature: All shipments available will now be picked up.
+Added Feature: Supported work orders will be started automatically. If yours are not, please post the ID of the PNJ.
+Added Feature: The bot will now use your salvaging center and open Salvage crates.
+
+Fixed: Trying to take more than allowed of unique object, will now delete stacks when full.
+Fixed: Path generation was returning no path generated when already at destination, the correct behavior has been fixed.
+Fixed: Toons were sometimes getting stuck on the side of stairs.
+Fixed: Available mission were note always refreshed correctly.
+
 
 ----------------------------------------------------------------------
 v0.4
