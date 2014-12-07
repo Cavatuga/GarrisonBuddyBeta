@@ -4,6 +4,10 @@ GarrisonBuddyBeta
 Garrison buddy, your personal butler!
 ----------------------------------------------------------------------
 
+v0.5.3
+Fixed a bug with picking up work orders, should now pick up all finished work orders.
+----------------------------------------------------------------------
+
 v0.5.2
 Deactived part of the experimental navigation system
 Improved speed of calculations of path and trimmed path
