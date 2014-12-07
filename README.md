@@ -4,6 +4,10 @@ GarrisonBuddyBeta
 Garrison buddy, your personal butler!
 ----------------------------------------------------------------------
 
+v0.5.4
+Fixed toon not close enough to node to interact. 
+----------------------------------------------------------------------
+
 v0.5.3
 Fixed a bug with picking up work orders, should now pick up all finished work orders.
 ----------------------------------------------------------------------
