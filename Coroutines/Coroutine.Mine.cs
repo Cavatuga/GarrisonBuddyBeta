@@ -207,8 +207,8 @@ namespace GarrisonBuddy
             }
             await Styx.CommonBot.Coroutines.CommonCoroutines.SleepForLagDuration();
 
-            //if (!Me.IsMoving && !Me.IsCasting && BotPoi.Current.AsObject != toHarvest)
-            //    toHarvest.Interact();
+            if (!Me.IsMoving && !Me.IsCasting && BotPoi.Current.AsObject != toHarvest)
+                toHarvest.Interact();
 
             BotPoi.Current = new BotPoi(toHarvest, PoiType.Harvest);
             return true;
