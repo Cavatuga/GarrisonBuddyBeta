@@ -3,6 +3,9 @@ GarrisonBuddyBeta
 
 Garrison buddy, your personal butler!
 ----------------------------------------------------------------------
+v0.5.1
+Fixed enchanting CD
+----------------------------------------------------------------------
 v0.5
 
 Added Feature: Now compatible as secondary bot with AutoAngler or GatherBuddy, you can fish while waiting for work orders or/and missions!
