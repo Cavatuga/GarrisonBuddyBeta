@@ -3,8 +3,17 @@ GarrisonBuddyBeta
 
 Garrison buddy, your personal butler!
 ----------------------------------------------------------------------
+
+v0.5.2
+Deactived part of the experimental navigation system
+Improved speed of calculations of path and trimmed path
+Safer Interactions with Game objects.
+
+----------------------------------------------------------------------
+
 v0.5.1
 Fixed enchanting CD
+
 ----------------------------------------------------------------------
 v0.5
 
