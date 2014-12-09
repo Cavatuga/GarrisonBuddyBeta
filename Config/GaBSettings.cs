@@ -62,6 +62,7 @@ namespace GarrisonBuddy.Config
 
         #endregion
 
+        #region General
         public static GaBSettings Mono { get; private set; }
 
         [Setting, Styx.Helpers.DefaultValue(false),
@@ -84,9 +85,7 @@ namespace GarrisonBuddy.Config
         [Setting, Styx.Helpers.DefaultValue(true),
          Description("To let the bot activate newly created or upgraded buildings."), Category("General")]
         public bool ActivateBuildings { get; set; }
-
-
-
+        
         [Setting, Styx.Helpers.DefaultValue(true),
          Description("To let the bot salvage crates from missions."), Category("General")]
         public bool SalvageCrates { get; set; }
@@ -95,9 +94,96 @@ namespace GarrisonBuddy.Config
          Description("The time minimum in minutes between two run at the garrison. Activate hearthstone if using as mixed mode."), Category("General")]
         public int TimeMinBetweenRun { get; set; }
 
+        #endregion
 
+        #region Work orders
 
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot pick up the completed work orders if available select true."),
+         Category("Work Orders")]
+        public bool CollectingShipments { get; set; }
 
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("[EXPERIMENTAL] Might need for you to post the ID of the PNJ on the forum. To let the bot start work orders if available select true."),
+         Category("Work Orders")]
+        public bool StartOrder { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool AlchemyLab { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool Barn { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool Barracks { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("Dwarven Bunker and Warmill option! To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool BunkerWarMill { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool EnchanterStudy { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool EngineeringWorks { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool Garden { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool GemBoutique { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool GladiatorSanctum { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool LumberMill { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool Mine { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool ScribeQuarters { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool TailoringEmporium { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool TheForge { get; set; }
+
+        [Setting, Styx.Helpers.DefaultValue(true),
+         Description("To let the bot start work orders for this building if available select true."),
+         Category("Work Orders")]
+        public bool TheTannery { get; set; }
+
+        #endregion
 
         [Setting, Styx.Helpers.DefaultValue(true),
          Description("To let the bot start missions select true. To not do missions, select false."),
@@ -107,19 +193,5 @@ namespace GarrisonBuddy.Config
         [Setting, Styx.Helpers.DefaultValue(true),
          Description("To let the bot collect completed missions select true."), Category("Mission")]
         public bool CompletedMissions { get; set; }
-
-
-
-
-
-        [Setting, Styx.Helpers.DefaultValue(true),
-         Description("To let the bot pick up the completed work orders if available select true."),
-         Category("Work Orders")]
-        public bool CollectingShipments { get; set; }
-
-        [Setting, Styx.Helpers.DefaultValue(true),
-         Description("[EXPERIMENTAL] Might need for you to post the ID of the PNJ on the firum. To let the bot start work orders if available select true."),
-         Category("Work Orders")]
-        public bool StartOrder { get; set; }
     }
 }

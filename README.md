@@ -2,10 +2,27 @@ GarrisonBuddyBeta
 =================
 
 Garrison buddy, your personal butler!
+
+
+
+v0.6
+----------------------------------------------------------------------
+
+Rewritten the whole navigation system : 
+    Will now take less than a few ms to find a path.
+    Less freezes
+    Less computing power asked from the user
+    More stable navigation for harvesting
+Fixed Professions CD
+Fixed error on loots
+Improved logging for user and debugging
+Too much fixes involved by the new system to list here... 
+
 ----------------------------------------------------------------------
 
 v0.5.4
 Fixed toon not close enough to node to interact. 
+Fixed missions not being completed
 ----------------------------------------------------------------------
 
 v0.5.3
