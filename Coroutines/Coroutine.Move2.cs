@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,16 +19,20 @@ namespace GarrisonBuddy
 {
     public class NavigationGaB : MeshNavigator
     {
-        private static readonly Stopwatch StuckWatch = new Stopwatch();
-        private readonly WaitTimer _waitTimer1 = new WaitTimer(TimeSpan.FromSeconds(1.0));
-        private readonly WaitTimer _waitTimer2 = WaitTimer.FiveSeconds;
-        private WoWPoint _currentDestination;
-        private MeshMovePath _currentMovePath2;
-        private StuckHandler _stuckHandlerGaB;
+        private readonly WaitTimer waitTimer1 = new WaitTimer(TimeSpan.FromSeconds(1.0));
+        private readonly WaitTimer waitTimer2 = WaitTimer.FiveSeconds;
+        private WoWPoint CurrentDestination;
+        private MeshMovePath CurrentMovePath2;
+        private StuckHandler stuckHandlerGaB;
+        public NavigationGaB()
+        {
+
+        }
         public override float PathPrecision { get; set; }
 
         public override void OnRemoveAsCurrent()
         {
+            GarrisonBuddy.Log("Custom navigation System removed!");
             base.OnRemoveAsCurrent();
         }
 
@@ -38,35 +43,40 @@ namespace GarrisonBuddy
 
         public override MoveResult MovePath(MeshMovePath path)
         {
-            MoveResult res = base.MovePath(path);
+            var res = base.MovePath(path);
             return res;
         }
 
         public override void OnSetAsCurrent()
         {
             base.OnSetAsCurrent();
-            _stuckHandlerGaB = StuckHandler;
-            _stuckHandlerGaB.Reset();
+            stuckHandlerGaB = this.StuckHandler;
+            stuckHandlerGaB.Reset();
+            GarrisonBuddy.Log("Custom navigation System activated!");
         }
 
         public override bool CanNavigateWithin(WoWPoint @from, WoWPoint to, float distanceTolerancy)
         {
-            return base.CanNavigateWithin(@from, to, distanceTolerancy);
+            return true;
         }
 
         public override bool CanNavigateFully(WoWPoint @from, WoWPoint to)
         {
-            return base.CanNavigateFully(@from, to);
+
+            return true;
         }
 
-        private WoWPoint GetDestination()
+        private WoWPoint getDestination()
         {
-            return _currentDestination;
+            return CurrentDestination;
         }
+
+        private static readonly Stopwatch StuckWatch = new Stopwatch();
 
         public override MoveResult MoveTo(WoWPoint location)
         {
-            _currentDestination = location;
+
+            CurrentDestination = location;
             if (location == WoWPoint.Zero)
                 return MoveResult.Failed;
 
@@ -76,16 +86,16 @@ namespace GarrisonBuddy
 
             WoWPoint MoverLocation = activeMover.Location;
 
-            if (_stuckHandlerGaB.IsStuck())
+            if (stuckHandlerGaB.IsStuck())
             {
                 GarrisonBuddy.Diagnostic("Is stuck! ");
-                _stuckHandlerGaB.Unstick();
+                stuckHandlerGaB.Unstick();
                 return MoveResult.UnstuckAttempt;
             }
             if (MoverLocation.Distance2DSqr(Coroutine.Dijkstra.ClosestToNodes(location)) < 1f)
             {
                 Clear();
-                _stuckHandlerGaB.Reset();
+                stuckHandlerGaB.Reset();
                 StuckWatch.Reset();
                 return MoveResult.ReachedDestination;
             }
@@ -96,9 +106,9 @@ namespace GarrisonBuddy
             }
             if (Mount.ShouldMount(location))
             {
-                Mount.StateMount(GetDestination);
+                Mount.StateMount(getDestination);
             }
-            if (_waitTimer1.IsFinished)
+            if (waitTimer1.IsFinished)
             {
                 WoWGameObject woWgameObject =
                     ObjectManager.GetObjectsOfType<WoWGameObject>(false, false)
@@ -113,43 +123,46 @@ namespace GarrisonBuddy
                 {
                     woWgameObject.Interact();
                 }
-                _waitTimer1.Reset();
+                waitTimer1.Reset();
             }
             bool flag = false;
-            if (_currentMovePath2 == null || _currentMovePath2.Path.End.DistanceSqr(location) > 9.0f)
+            if (CurrentMovePath2 == null || CurrentMovePath2.Path.End.DistanceSqr(location) > 9.0f)
             {
                 flag = true;
             }
 
-            else if (_waitTimer2.IsFinished && Unnamed2(_currentMovePath2, MoverLocation))
+            else if (waitTimer2.IsFinished && Unnamed2(CurrentMovePath2, MoverLocation))
             {
                 WoWMovement.MoveStop();
                 flag = true;
-                _waitTimer2.Reset();
+                waitTimer2.Reset();
             }
             if (!flag)
             {
-                _stuckHandlerGaB.Reset();
-                return MovePath(_currentMovePath2);
+                stuckHandlerGaB.Reset();
+                return MovePath(CurrentMovePath2);
             }
-            WoWPoint startFp;
-            WoWPoint endFp;
-            if (MoverLocation.DistanceSqr(location) > 160000.0 &&
-                FlightPaths.ShouldTakeFlightpath(MoverLocation, location, activeMover.MovementInfo.RunSpeed) &&
-                FlightPaths.SetFlightPathUsage(MoverLocation, location, out startFp, out endFp))
+            if (flag)
             {
-                _stuckHandlerGaB.Reset();
+                WoWPoint startFp;
+                WoWPoint endFp;
+                if (MoverLocation.DistanceSqr(location) > 160000.0 &&
+                    FlightPaths.ShouldTakeFlightpath(MoverLocation, location, activeMover.MovementInfo.RunSpeed) &&
+                    FlightPaths.SetFlightPathUsage(MoverLocation, location, out startFp, out endFp))
+                    return MoveResult.PathGenerated;
+                PathFindResult path = FindPath(MoverLocation, location);
+                if (!path.Succeeded)
+                {
+                    stuckHandlerGaB.Reset();
+                    return MoveResult.PathGenerationFailed;
+                }
+                CurrentMovePath2 = new MeshMovePath(path);
+                stuckHandlerGaB.Reset();
+                stuckHandlerGaB.Reset();
                 return MoveResult.PathGenerated;
             }
-            PathFindResult path = FindPath(MoverLocation, location);
-            if (!path.Succeeded)
-            {
-                _stuckHandlerGaB.Reset();
-                return MoveResult.PathGenerationFailed;
-            }
-            _currentMovePath2 = new MeshMovePath(path);
-            _stuckHandlerGaB.Reset();
-            return MoveResult.PathGenerated;
+            stuckHandlerGaB.Reset();
+            return MovePath(CurrentMovePath2);
         }
 
         private bool Unnamed2(MeshMovePath param0, Vector3 param1)
@@ -198,9 +211,11 @@ namespace GarrisonBuddy
             };
         }
 
-        private new PathFindResult FindPath(WoWPoint start, WoWPoint end)
+        private PathFindResult FindPath(WoWPoint start, WoWPoint end)
         {
-            var obj = new PathFindResult {Start = start, End = end};
+            var obj = new PathFindResult();
+            obj.Start = start;
+            obj.End = end;
             if (TreeRoot.State == TreeRootState.Stopping)
             {
                 return new PathFindResult
@@ -216,20 +231,36 @@ namespace GarrisonBuddy
                     End = obj.End
                 };
             }
+            //this.\u0001 = false;
+            // ISSUE: reference to a compiler-generated method
             Task<PathFindResult> task = Task<PathFindResult>.Factory.StartNew(() => FindPathInner(obj));
             DateTime startedAt = DateTime.Now;
             try
             {
+                //Start generation of path as async
+                //if (\u001F\u0003.\u007E\u009F\u0012((object) task, 10))
+                //   return task.Result;
+                //FrameLockRelease frameLockRelease = GreyMagic.ExternalReadCache(.\u001E\u0010.\u007E\u001A\u001E((object) StyxWoW.Memory, true);
+
                 //while it is not done with timeout 
                 while ((DateTime.Now - startedAt).TotalMilliseconds < 1000/TreeRoot.TicksPerSecond || task.IsCompleted)
+                    //(!\u001F\u0003.\u007E\u009F\u0012((object) task, 1000/(int) TreeRoot.TicksPerSecond))
                 {
                     try
                     {
-                        StyxWoW.Memory.ReleaseFrame();
-                        ObjectManager.Update();
-                        WoWMovement.Pulse();
+                        //FrameLock frameLock = GreyMagic.; // \u0008\u0004.\u007E\u001D\u0014((object) StyxWoW.Memory);
+                        try
+                        {
+                            ObjectManager.Update();
+                            WoWMovement.Pulse();
+                        }
+                        finally
+                        {
+                            //if (frameLock != null)
+                            //\u0008.\u007E\u000E\u0003((object) frameLock);
+                        }
+                        //this.\u0001 = StyxWoW.Me.IsActuallyInCombat;
                         StyxWoW.ResetAfk();
-                        StyxWoW.Memory.AcquireFrame();
                     }
                     catch (Exception ex)
                     {
@@ -238,10 +269,16 @@ namespace GarrisonBuddy
                 }
                 return task.Result;
             }
+            catch (AggregateException ex)
+            {
+                //throw new Exception(MeshNavigator.\u0010(148705), \u0019\u0003.\u007E\u0095\u0012((object) ex));
+            }
             finally
             {
-                task.Dispose();
+                task.Dispose(); //\u0008.\u007E\u0010\u0004((object) task);
             }
+
+            return obj;
         }
 
         public override WoWPoint[] GeneratePath(WoWPoint @from, WoWPoint to)

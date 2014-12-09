@@ -18,16 +18,18 @@ namespace GarrisonBuddy
 {
     partial class Coroutine
     {
-        private static readonly List<WoWPoint> CurrentWaypointsList = new List<WoWPoint>();
+        private static List<WoWPoint> _currentWaypointsList = new List<WoWPoint>();
         private static WoWPoint _target;
+        private static float _lastDistance;
         private static readonly Stopwatch StuckWatch = new Stopwatch();
-        private static MoveResult _lastMoveResult;
+
+        private static MoveResult lastMoveResult;
 
         public static async Task<bool> MoveTo(WoWPoint destination, string destinationName = null)
         {
-           _lastMoveResult = Navigator.MoveTo(destination);
-            Navigator.GetRunStatusFromMoveResult(_lastMoveResult);
-            switch (_lastMoveResult)
+           lastMoveResult = Navigator.MoveTo(destination);
+            Navigator.GetRunStatusFromMoveResult(lastMoveResult);
+            switch (lastMoveResult)
             {
                     case MoveResult.Failed:
                     case MoveResult.ReachedDestination:
@@ -43,13 +45,13 @@ namespace GarrisonBuddy
 
             if (_target != destination || _lastMoveTo == new WoWPoint())
             {
-                if (CurrentWaypointsList.Count == 0)
+                if (_currentWaypointsList.Count == 0)
                 {
                     if (Me.Location.Distance(destination) > 5)
-                        GarrisonBuddy.Warning("Couldn't generate path from " + Me.Location + " to " + destination);
+                        GarrisonBuddy.Warning("[Navigation] Couldn't generate path from " + Me.Location + " to " + destination);
                     return false;
                 }
-                _lastMoveTo = CurrentWaypointsList.First();
+                _lastMoveTo = _currentWaypointsList.First();
                 _target = destination;
                 StuckWatch.Reset();
                 StuckWatch.Start();
@@ -63,18 +65,18 @@ namespace GarrisonBuddy
                 }
                 else
                 {
-                    if (CurrentWaypointsList.Count == 0)
+                    if (_currentWaypointsList.Count == 0)
                     {
-                        GarrisonBuddy.Diagnostic("Waypoints list empty, assuming at destination: " + destinationName);
+                        GarrisonBuddy.Diagnostic("[Navigation] Waypoints list empty, assuming at destination: " + destinationName);
                         return false;
                     }
 
-                    waypoint = CurrentWaypointsList.First();
+                    waypoint = _currentWaypointsList.First();
 
-                    CurrentWaypointsList.Remove(waypoint);
+                    _currentWaypointsList.Remove(waypoint);
                     StuckWatch.Reset();
                     StuckWatch.Start();
-                    GarrisonBuddy.Diagnostic("Loading next waypoint to " + destinationName + ": " + waypoint);
+                    GarrisonBuddy.Diagnostic("[Navigation] Loading next waypoint to " + destinationName + ": " + waypoint);
                 }
                 _lastMoveTo = waypoint;
                 {
@@ -86,6 +88,7 @@ namespace GarrisonBuddy
                     }
                     WoWMovement.ClickToMove(waypoint);
                 }
+                _lastDistance = Me.Location.DistanceSqr(_lastMoveTo);
                 return true;
             }
             return false;
