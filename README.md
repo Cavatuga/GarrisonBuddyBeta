@@ -5,6 +5,17 @@ Garrison buddy, your personal butler!
 
 
 ----------------------------------------------------------------------
+v0.6.3
+WARNING: This build is slower than it will be in the future for debugging purposes! 
+
+Fixed id spell for professions
+Fixed movement to Anvil: too fast between actions
+Improved Salvage crate run stability 
+Switched default value from true to false for individual work orders configuration
+Added un-mount order if needed before casting daily cd
+Improved stability of the code concerning UseItem actions and debugging output
+
+----------------------------------------------------------------------
 v0.6.2
 Right build pushed :D 
 
