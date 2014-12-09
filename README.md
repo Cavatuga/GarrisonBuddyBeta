@@ -8,6 +8,7 @@ Garrison buddy, your personal butler!
 v0.6
 ----------------------------------------------------------------------
 
+Added option to choose which work order to start
 Rewritten the whole navigation system : 
     Will now take less than a few ms to find a path.
     Less freezes
