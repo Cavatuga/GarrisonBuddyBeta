@@ -104,7 +104,7 @@ namespace GarrisonBuddy
                 count += itemInReagentBank.StackCount;
             }
 
-            GarrisonBuddy.Diagnostic("[ShipmentStart] Total found {0} - #{1} - needed #{1}", ReagentId, count, NumberReagent);
+            GarrisonBuddy.Diagnostic("[ShipmentStart] Total found {0} - #{1} - needed #{2} - {3} ", ReagentId, count, NumberReagent, count >= NumberReagent);
             return count >= NumberReagent;
         }
 
@@ -127,7 +127,7 @@ namespace GarrisonBuddy
                     count += itemInReagentBank.StackCount;
                 }
                 
-                GarrisonBuddy.Diagnostic("[ShipmentStart] Total found {0} - #{1} - needed #{1}", ReagentId, count, NumberReagent);
+                GarrisonBuddy.Diagnostic("[ShipmentStart] Total found {0} - #{1} - needed #{2}", ReagentId, count, NumberReagent);
                 if (count >= NumberReagent)
                         return true;
             }
@@ -150,8 +150,9 @@ namespace GarrisonBuddy
             if (itemInReagentBank != null)
                 count += itemInReagentBank.StackCount;
 
-            if (count >= NumberReagent) return true;
-
+            if (count >= NumberReagent)
+                return true;
+            return false;
 
             IEnumerable<WoWItem> millableInBags =
                 StyxWoW.Me.BagItems.Where(i => MillableFrom.Contains(i.Entry) && i.StackCount > 5);
