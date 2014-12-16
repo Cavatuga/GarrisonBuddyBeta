@@ -3,6 +3,9 @@
 
 ##Garrison buddy, your personal butler!
 
+###v0.7.1
+* Fix Tailor work order item ID
+
 ###v0.7.0
 * Major changes code side improving stability and speed
 * New GUI
