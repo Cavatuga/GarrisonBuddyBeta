@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using GreyMagic;
 using Styx;
 using Styx.Common;
 using Styx.Common.Helpers;
@@ -21,9 +22,62 @@ namespace GarrisonBuddy
     {
         private readonly WaitTimer waitTimer1 = new WaitTimer(TimeSpan.FromSeconds(1.0));
         private readonly WaitTimer waitTimer2 = WaitTimer.FiveSeconds;
-        private WoWPoint CurrentDestination;
+        internal static WoWPoint CurrentDestination;
         private MeshMovePath CurrentMovePath2;
-        private StuckHandler stuckHandlerGaB;
+        private StuckHandlerGaB stuckHandlerGaB;
+
+
+        public class StuckHandlerGaB : StuckHandler
+        {
+            private StuckHandler Native;
+            private Stopwatch stopwatch = new Stopwatch();
+            private int cpt = 0;
+            private WoWPoint lastCheckedLocation = new WoWPoint(0,0,0);
+            private WoWPoint cacheDestination = WoWPoint.Empty;
+            public StuckHandlerGaB(StuckHandler native)
+            {
+                Native = native;
+                lastCheckedLocation = StyxWoW.Me.Location;
+                stopwatch.Start();
+            }
+            public override bool IsStuck()
+            {
+                if (stopwatch.ElapsedMilliseconds > 5000)
+                {
+                    stopwatch.Reset();
+                    stopwatch.Start();
+                    if (CurrentDestination != cacheDestination)
+                    {
+                        lastCheckedLocation = StyxWoW.Me.Location;
+                        cacheDestination = CurrentDestination;
+                        return false;
+                    }
+                    else if (StyxWoW.Me.Location.Distance(lastCheckedLocation) < 3)
+                    {
+                        cpt++;
+                        return true;
+                    }
+                    lastCheckedLocation = StyxWoW.Me.Location;
+                }
+                return false;
+            }
+
+            public override void Reset()
+            {
+                //stopwatch.Reset();
+                //stopwatch.Start();
+                cpt = 0;
+                cacheDestination = CurrentDestination;
+            }
+
+            public override void Unstick()
+            {
+                for (int i = 0; i < cpt; i++)
+                {
+                    Native.Unstick();                    
+                }
+            }
+        }
         public NavigationGaB()
         {
 
@@ -50,8 +104,7 @@ namespace GarrisonBuddy
         public override void OnSetAsCurrent()
         {
             base.OnSetAsCurrent();
-            stuckHandlerGaB = this.StuckHandler;
-            stuckHandlerGaB.Reset();
+            stuckHandlerGaB = new StuckHandlerGaB(Coroutine.oldNavigation.StuckHandler);
             GarrisonBuddy.Log("Custom navigation System activated!");
         }
 
@@ -75,7 +128,6 @@ namespace GarrisonBuddy
 
         public override MoveResult MoveTo(WoWPoint location)
         {
-
             CurrentDestination = location;
             if (location == WoWPoint.Zero)
                 return MoveResult.Failed;
@@ -88,18 +140,17 @@ namespace GarrisonBuddy
 
             if (stuckHandlerGaB.IsStuck())
             {
-                GarrisonBuddy.Diagnostic("Is stuck! ");
+                GarrisonBuddy.Diagnostic("Is stuck :O ! ");
                 stuckHandlerGaB.Unstick();
                 return MoveResult.UnstuckAttempt;
             }
-            if (MoverLocation.Distance2DSqr(location) < 1f)
+            if (MoverLocation.Distance(location) < 2.4f)
             {
                 Clear();
                 stuckHandlerGaB.Reset();
-                StuckWatch.Reset();
                 return MoveResult.ReachedDestination;
             }
-            if (MoverLocation.Distance2DSqr(Coroutine.Dijkstra.ClosestToNodes(location)) < 3f)
+            if (MoverLocation.Distance(Coroutine.Dijkstra.ClosestToNodes(location)) < 5f)
             {
                 Navigator.PlayerMover.MoveTowards(location);
                 stuckHandlerGaB.Reset();
@@ -132,37 +183,31 @@ namespace GarrisonBuddy
                 flag = true;
             }
 
-            else if (waitTimer2.IsFinished && Unnamed2(CurrentMovePath2, MoverLocation))
-            {
-                WoWMovement.MoveStop();
-                flag = true;
-                waitTimer2.Reset();
-            }
+            //else if (waitTimer2.IsFinished && Unnamed2(CurrentMovePath2, MoverLocation))
+            //{
+            //    WoWMovement.MoveStop();
+            //    flag = true;
+            //    waitTimer2.Reset();
+            //}
             if (!flag)
             {
-                stuckHandlerGaB.Reset();
                 return MovePath(CurrentMovePath2);
             }
-            if (flag)
-            {
+            
                 WoWPoint startFp;
                 WoWPoint endFp;
-                if (MoverLocation.DistanceSqr(location) > 160000.0 &&
+                stuckHandlerGaB.Reset();
+                if (MoverLocation.DistanceSqr(location) > 100000 &&
                     FlightPaths.ShouldTakeFlightpath(MoverLocation, location, activeMover.MovementInfo.RunSpeed) &&
                     FlightPaths.SetFlightPathUsage(MoverLocation, location, out startFp, out endFp))
                     return MoveResult.PathGenerated;
-                PathFindResult path = FindPath(MoverLocation, location);
-                if (!path.Succeeded)
+                PathFindResult path2 = FindPath(MoverLocation, location);
+                if (!path2.Succeeded)
                 {
-                    stuckHandlerGaB.Reset();
                     return MoveResult.PathGenerationFailed;
                 }
-                CurrentMovePath2 = new MeshMovePath(path);
-                stuckHandlerGaB.Reset();
+                CurrentMovePath2 = new MeshMovePath(path2);
                 return MoveResult.PathGenerated;
-            }
-            stuckHandlerGaB.Reset();
-            return MovePath(CurrentMovePath2);
         }
 
         private bool Unnamed2(MeshMovePath param0, Vector3 param1)
@@ -237,29 +282,15 @@ namespace GarrisonBuddy
             DateTime startedAt = DateTime.Now;
             try
             {
-                //Start generation of path as async
-                //if (\u001F\u0003.\u007E\u009F\u0012((object) task, 10))
-                //   return task.Result;
-                //FrameLockRelease frameLockRelease = GreyMagic.ExternalReadCache(.\u001E\u0010.\u007E\u001A\u001E((object) StyxWoW.Memory, true);
-
+                //StyxWoW.Memory.ReleaseFrame();
                 //while it is not done with timeout 
                 while ((DateTime.Now - startedAt).TotalMilliseconds < 1000/TreeRoot.TicksPerSecond || task.IsCompleted)
-                    //(!\u001F\u0003.\u007E\u009F\u0012((object) task, 1000/(int) TreeRoot.TicksPerSecond))
                 {
                     try
                     {
-                        //FrameLock frameLock = GreyMagic.; // \u0008\u0004.\u007E\u001D\u0014((object) StyxWoW.Memory);
-                        try
-                        {
-                            ObjectManager.Update();
-                            WoWMovement.Pulse();
-                        }
-                        finally
-                        {
-                            //if (frameLock != null)
-                            //\u0008.\u007E\u000E\u0003((object) frameLock);
-                        }
-                        //this.\u0001 = StyxWoW.Me.IsActuallyInCombat;
+                        //StyxWoW.Memory.AcquireFrame();
+                        ObjectManager.Update();
+                        WoWMovement.Pulse();
                         StyxWoW.ResetAfk();
                     }
                     catch (Exception ex)
@@ -271,11 +302,11 @@ namespace GarrisonBuddy
             }
             catch (AggregateException ex)
             {
-                //throw new Exception(MeshNavigator.\u0010(148705), \u0019\u0003.\u007E\u0095\u0012((object) ex));
+                Logging.WriteException(ex);
             }
             finally
             {
-                task.Dispose(); //\u0008.\u007E\u0010\u0004((object) task);
+                task.Dispose();
             }
 
             return obj;
@@ -283,13 +314,11 @@ namespace GarrisonBuddy
 
         public override WoWPoint[] GeneratePath(WoWPoint @from, WoWPoint to)
         {
-            Logging.Write("TEST GENERATE PATH");
             return Coroutine.Dijkstra.GetPathWoW(@from, to);
         }
 
         public override bool AtLocation(WoWPoint point1, WoWPoint point2)
         {
-            Logging.Write("TEST AtLocation");
             return Coroutine.Dijkstra.ClosestToNodes(point1).Distance(Coroutine.Dijkstra.ClosestToNodes(point2)) < 3;
         }
     }

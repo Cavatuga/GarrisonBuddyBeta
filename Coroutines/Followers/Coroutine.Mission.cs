@@ -46,7 +46,7 @@ namespace GarrisonBuddy
 
         private static bool CanRunStartMission()
         {
-            return GaBSettings.Mono.StartMissions && DoCheckAvailableMissions() && ToStart.Count > 0;
+            return GaBSettings.Get().StartMissions && DoCheckAvailableMissions() && ToStart.Count > 0;
         }
 
         public static async Task<bool> StartMissions()
@@ -95,18 +95,13 @@ namespace GarrisonBuddy
                     return true;
                 }
             }
-            match.Key.AddFollowersToMission(match.Value.ToList());
+            await match.Key.AddFollowersToMission(match.Value.ToList());
             InterfaceLua.StartMission(match.Key);
+            await CommonCoroutines.SleepForRandomUiInteractionTime();
             InterfaceLua.ClickCloseMission();
             return true;
         }
 
-        private static WaitTimer CheckAvailableMissionTimer;
-        private static bool TurnInCompletedRunning;
-        private static bool StartMissionRunning;
-        private static WaitTimer _StartMissionsWaitTimer;
-
-        private static bool NeedToRun = false;
         public static bool DoCheckAvailableMissions()
         {
             int numberMissionAvailable = MissionLua.GetNumberAvailableMissions();
@@ -183,7 +178,7 @@ namespace GarrisonBuddy
 
         private static bool CanRunTurnInMissions()
         {
-            return GaBSettings.Mono.CompletedMissions && MissionLua.GetNumberCompletedMissions() != 0;
+            return GaBSettings.Get().CompletedMissions && MissionLua.GetNumberCompletedMissions() != 0;
         }
 
         public static async Task<bool> DoTurnInCompletedMissions()
@@ -197,9 +192,10 @@ namespace GarrisonBuddy
             if (await MoveToTable())
                 return true;
 
+            await CommonCoroutines.SleepForRandomUiInteractionTime();
             MissionLua.TurnInAllCompletedMissions();
             RestoreCompletedMission = true;
-            await CommonCoroutines.SleepForLagDuration();
+            await CommonCoroutines.SleepForRandomUiInteractionTime();
             TurnInMissionsTriggered = false;
             return true;
         }

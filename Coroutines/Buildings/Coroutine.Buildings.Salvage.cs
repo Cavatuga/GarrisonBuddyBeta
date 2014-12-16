@@ -30,7 +30,7 @@ namespace GarrisonBuddy
             salvageCratesFound = null;
             building = null;
 
-            if (!GaBSettings.Mono.SalvageCrates)
+            if (!GaBSettings.Get().SalvageCrates)
             {
                 GarrisonBuddy.Diagnostic("[Salvage] Deactivated in user settings.");
                 return false;
@@ -63,7 +63,7 @@ namespace GarrisonBuddy
             if (!CanRunSalvage(out salvageCrates, out building))
                 return false;
             
-            WoWUnit unit = ObjectManager.GetObjectsOfType<WoWUnit>().FirstOrDefault(u => u.Entry == building.PnjId);
+            WoWUnit unit = ObjectManager.GetObjectsOfTypeFast<WoWUnit>().FirstOrDefault(u => u.Entry == building.PnjId);
             // can't find it? Let's try to get closer to the default location.
             if (unit == null)
             {

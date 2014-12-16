@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bots.Grind;
 using GarrisonBuddy.Config;
+using GarrisonBuddy.Objects;
 using GarrisonLua;
 using NewMixedMode;
 using Styx;
@@ -14,6 +15,7 @@ using Styx.CommonBot.Coroutines;
 using Styx.CommonBot.Frames;
 using Styx.CommonBot.POI;
 using Styx.CommonBot.Routines;
+using Styx.Pathing;
 using Styx.TreeSharp;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
@@ -148,11 +150,35 @@ namespace GarrisonBuddy
             get { return _vendorBehavior ?? (_vendorBehavior = LevelBot.CreateVendorBehavior()); }
         }
 
+        private static ActionsSequence mainSequence;
         internal static void OnStart()
         {
             try
             {
+                InitializeShipments();
+                GarrisonBuddy.Warning("InitializeShipments");
+                InitializeMissions();
+                GarrisonBuddy.Warning("InitializeMissions");
+                InitializationMove();
+                GarrisonBuddy.Warning("InitializationMove");
+                InitializeDailies();
+                GarrisonBuddy.Warning("InitializeDailies");
+
+                mainSequence = new ActionsSequence();
+                mainSequence.AddAction(new ActionOnTimer<WoWItem>(UseItemInbags, CanTPToGarrison));
+                mainSequence.AddAction(InitializeBuildingsCoroutines());
+                mainSequence.AddAction(new ActionBasic(DoMissions));
+                mainSequence.AddAction(new ActionOnTimer<DailyProfession>(DoDailyCd, CanRunDailies));
+                mainSequence.AddAction(new ActionBasic(DoSalvages));
+                mainSequence.AddAction(new ActionBasic(LastRound));
+                mainSequence.AddAction(new ActionBasic(Waiting));
+
+                InitializeDailies();
+                GarrisonBuddy.Warning("mainSequence");
+
                 LootTargeting.Instance.IncludeTargetsFilter += IncludeTargetsFilter;
+                InitializeDailies();
+                GarrisonBuddy.Warning("LootTargeting");
             }
             catch (Exception e)
             {
@@ -160,23 +186,18 @@ namespace GarrisonBuddy
             }
         }
 
-        internal static void InitializeCoroutines()
-        {
-            if (init) return;
-            InitializeShipments();
-            InitializeMissions();
-            InitializationMove();
-            InitializeDailies();
-            init = true;
-        }
 
         internal static void OnStop()
         {
             LootTargeting.Instance.IncludeTargetsFilter -= IncludeTargetsFilter;
+            mainSequence = null;
+            Navigator.NavigationProvider = oldNavigation;
+            navigation = null;
         }
 
         internal static void IncludeTargetsFilter(List<WoWObject> incomingUnits, HashSet<WoWObject> outgoingUnits)
         {
+
             if (StyxWoW.Me.Combat)
                 return;
 
@@ -215,11 +236,31 @@ namespace GarrisonBuddy
                 outgoingUnits.Add(unit);
             }
         }
-
+        
         private static Stopwatch testStopwatch = new Stopwatch();
-        private static bool LogTime = false;
+        private static bool LogTime = true;
         public static async Task<bool> RootLogic()
         {
+            var configVersion = GaBSettings.Get().ConfigVersion;
+            if (configVersion.Build != GarrisonBuddy.Version.Build ||
+                configVersion.Major != GarrisonBuddy.Version.Major ||
+                configVersion.Minor != GarrisonBuddy.Version.Minor ||
+                configVersion.Revision != GarrisonBuddy.Version.Revision)
+            {
+                // Popup to explain this is a beta and they need to reconfigure their configs.
+                Bots.DungeonBuddy.Helpers.Alert.Show("GarrisonBuddy Public Beta",
+                    "Hey!\n" +
+                    "Thanks for your support and your help testing out this new botBase.\n" +
+                    "Since GarrisonBuddy is still on heavy development you are required to verify your settings foe each new build you install.\n" +
+                    "Be sure to restart the bot after doing so!" +
+                    "If you have any issues, please post a full log on the GarrisonBuddy Forum page.\n" +
+                    "Bot safe,\n" +
+                    "Deams\n",
+                    60, true, false);
+                TreeRoot.Stop();
+                return true;
+            }
+            // Fast checks
             CheckResetAfk();
 
             if (await RestoreUiIfNeeded())
@@ -245,58 +286,44 @@ namespace GarrisonBuddy
 
             if (BotPoi.Current.Type == PoiType.None && LootTargeting.Instance.FirstObject != null)
                 SetLootPoi(LootTargeting.Instance.FirstObject);
+
             if(LogTime)
-            GarrisonBuddy.Diagnostic("[Time] TICK: " + testStopwatch.Elapsed);
+                GarrisonBuddy.Diagnostic("[Time] TICK: " + testStopwatch.Elapsed);
 
-            testStopwatch.Reset();
-            testStopwatch.Start();
-
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] start: " + testStopwatch.Elapsed);
-            if (await TransportToGarrison())
+            // Heavier coroutines on timer
+            if (await mainSequence.ExecuteAction())
                 return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] TransportToGarrison: " + testStopwatch.Elapsed);
-
-            if (await DoBuildingRelated())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] DoBuildingRelated: " + testStopwatch.Elapsed);
-
-            if (await DoMissions())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] DoMissions: " + testStopwatch.Elapsed);
-
-            if (await DoDailyCd())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] DoDailyCd: " + testStopwatch.Elapsed);
-
-            if (await DoSalvages())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] DoSalvages: " + testStopwatch.Elapsed);
-
-            if (await LastRound())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("[Time] LastRound: " + testStopwatch.Elapsed);
-
-            if (await Waiting())
-                return true;
-            if (LogTime)
-            GarrisonBuddy.Diagnostic("Time Waiting: " + testStopwatch.Elapsed);
 
             ReadyToSwitch = true;
             return false;
         }
 
+        internal static Tuple<bool, WoWItem> CanTPToGarrison()
+        {
+            if (!GaBSettings.Get().UseGarrisonHearthstone)
+            {
+                return new Tuple<bool, WoWItem>(false, null);
+            }
+
+            if (GarrisonsZonesId.Contains(Me.ZoneId))
+            {
+                return new Tuple<bool, WoWItem>(false, null);
+            }
+
+            WoWItem stone = Me.BagItems.FirstOrDefault(i => i.Entry == GarrisonHearthstone);
+            if(stone == null)
+                return new Tuple<bool, WoWItem>(false, null);
+
+             if (stone.CooldownTimeLeft.TotalSeconds > 0)
+                return new Tuple<bool, WoWItem>(false, null);
+
+            return new Tuple<bool, WoWItem>(true,stone);
+        }
+
         private static async Task<bool> TransportToGarrison()
         {
-            if (GarrisonsZonesId.Contains(Me.ZoneId)) return false;
 
-            if (GaBSettings.Mono.UseGarrisonHearthstone)
+            if (GaBSettings.Get().UseGarrisonHearthstone)
             {
                 WoWItem stone = Me.BagItems.FirstOrDefault(i => i.Entry == GarrisonHearthstone);
                 if (stone != null)
@@ -326,7 +353,7 @@ namespace GarrisonBuddy
                     "Character not in garrison and UseGarrisonHearthstone set to false, doing nothing.");
                 return false;
             }
-            return true;
+            return false;
         }
 
         private static bool IsAutoAngler()
@@ -429,7 +456,7 @@ namespace GarrisonBuddy
 //if (hasItemTomail && Styx.Helpers.CharacterSettings.Instance.MailRecipient.Any())
 //{
 //    var mailBox =
-//        ObjectManager.GetObjectsOfType<WoWGameObject>()
+//        ObjectManager.GetObjectsOfTypeFast<WoWGameObject>()
 //            .Where(o => o.SubType == WoWGameObjectType.Mailbox)
 //            .FirstOrDefault();
 //    if(mailBox == null)
