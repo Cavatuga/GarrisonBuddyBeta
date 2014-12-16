@@ -5,10 +5,10 @@
 
 ###v0.7.0
 * Major changes code side improving stability and speed
-- New GUI
-- Options have been rewritten
-- Added HBRelog mode: will skip to next profile once done in you Garrison
-- Too many changes to list, bug reports from old version are now null, please report with new versions.
+* New GUI
+* Options have been rewritten
+* Added HBRelog mode: will skip to next profile once done in you Garrison
+* Too many changes to list, bug reports from old version are now null, please report with new versions.
 
 
 ###v0.6.4
